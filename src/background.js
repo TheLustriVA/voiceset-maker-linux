@@ -168,9 +168,9 @@ const startServer = async () => {
       // Make sure file exists
       if (!fs.existsSync(workingDir + modelName + '.txt')) {
         // Create file
-        fs.writeFileSync(workingDir + modelName + '.txt', 'wavs/' + modelName + '_' + newNumber2 + '_' + newNumber + '|' + text + "\n");
+        fs.writeFileSync(workingDir + modelName + '.txt', 'wavs/' + modelName + '_' + newNumber2 + '_' + newNumber + '.wav' + '|' + text + "\n");
       } else {
-        fs.appendFileSync(workingDir + modelName + '.txt', 'wavs/' + modelName + '_' + newNumber2 + '_' + newNumber + '|' + text + "\n")
+        fs.appendFileSync(workingDir + modelName + '.txt', 'wavs/' + modelName + '_' + newNumber2 + '_' + newNumber + '.wav' + '|' + text + "\n")
       }
 
       // Make timestamp readable by removing everything behind ,
