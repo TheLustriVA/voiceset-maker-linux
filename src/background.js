@@ -192,7 +192,7 @@ const startServer = async () => {
       console.log(start, end, duration, text);
 
       // Make sure audio is mono 22.050kHz using exec
-      const child = exec('ffmpeg' + ' -i ' + filePath + ' -ss ' + start + ' -t ' + duration + ' -ac 1 -ar 22050 ' + workingDir + 'wavs/' + modelName + '_' + newNumber2 + '_' + newNumber + '.wav', (err, stdout, stderr) => {
+      const child = exec('ffmpeg' + ' -i ' + filePath + ' -ss ' + start + ' -t ' + duration + ' -ac 1 -ar 22050 ' + '"' + workingDir + '"' + 'wavs/' + '"' + modelName + '"' + '_' + newNumber2 + '_' + newNumber + '.wav', (err, stdout, stderr) => {
         if (err) {
           console.error(`exec error: ${err}`);
         }
