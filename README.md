@@ -6,7 +6,8 @@ A User Interface for the [Whisper](https://github.com/openai/whisper) applicatio
 
 1. Install [Whisper](https://github.com/openai/whisper#setup) and make sure you are able to run it from command prompt.
 2. Install [ffmpeg](https://ffmpeg.org/download.html) and make sure you are able to run it from command prompt.
-3. You might have issues using your graphics card with Whisper if so do `pip uninstall torch` and [manually install it](https://pytorch.org/get-started/locally/)
+3. Download the installer from the [releases](https://github.com/StianWiu/voiceset-maker/releases) tab. It will be flagged by windows as I have not registered it.
+4. You might have issues using your graphics card with Whisper if so do `pip uninstall torch` and [manually install it](https://pytorch.org/get-started/locally/)
 
 # Bugs
 
