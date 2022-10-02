@@ -10,8 +10,17 @@
       <input
         style="text-align: center"
         v-model="this.modelName"
-        @change="this.updateName()"
+        @change="this.updateValues()"
         type="text"
+      />
+    </div>
+    <div class="setting">
+      <h3>How many clips to cut at once</h3>
+      <input
+        style="text-align: center"
+        v-model="this.cuttingValue"
+        @change="this.updateValues()"
+        type="number"
       />
     </div>
     <br />
@@ -46,6 +55,9 @@ export default {
     if (localStorage.getItem("modelName")) {
       this.modelName = localStorage.getItem("modelName");
     }
+    if (localStorage.getItem("cuttingValue")) {
+      this.cuttingValue = localStorage.getItem("cuttingValue");
+    }
   },
   data() {
     return {
@@ -53,6 +65,7 @@ export default {
       modelName: "",
       loading: false,
       finished: false,
+      cuttingValue: 10,
     };
   },
   methods: {
@@ -104,6 +117,7 @@ export default {
             workingDir: localStorage.getItem("workingDir"),
             whisperFlags: localStorage.getItem("whisperFlags"),
             modelName: this.modelName,
+            cuttingValue: this.cuttingValue,
           },
         })
           .then((response) => {
@@ -125,8 +139,9 @@ export default {
           });
       }
     },
-    updateName() {
+    updateValues() {
       localStorage.setItem("modelName", this.modelName);
+      localStorage.setItem("cuttingValue", this.cuttingValue);
     },
   },
 };

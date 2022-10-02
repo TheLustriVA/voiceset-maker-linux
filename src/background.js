@@ -8,7 +8,7 @@ const isDevelopment = process.env.NODE_ENV !== 'production'
 var fs = require("fs")
 var { default: srtParser2 } = require("srt-parser-2")
 var parser = new srtParser2()
-var ffmpeg = require('ffmpeg-static-electron');
+let whisper;
 const { exec } = require('child_process');
 const startServer = async () => {
   const express = require('express');
@@ -37,7 +37,10 @@ const startServer = async () => {
       defaultPath: req.body.workingDir,
       title: "Select Audio File",
       filters: [
-        { name: 'Audio', extensions: ['wav'] },
+        // Limit to only audio file extensions
+        // Create list of audio file extensions
+        { name: 'Audio', extensions: ['mp3', 'wav', 'ogg', 'flac', 'aac', 'm4a', 'wma', 'aiff', 'au', 'ac3', 'amr', 'ape', 'dts', 'mka', 'mlp', 'tta', 'wv', 'webm', 'opus'] },
+        { name: 'Video', extensions: ['mp4', 'mov', 'avi', 'mkv'] },
       ]
     })
     if (path) {
@@ -78,6 +81,7 @@ const startServer = async () => {
     if (!req.body.workingDir) return res.status(400).send({ error: "No working directory provided" })
     if (!req.body.whisperFlags) return res.status(400).send({ error: "No flags provided" })
     if (!req.body.modelName) return res.status(400).send({ error: "No model name provided" })
+    if (!req.body.cuttingValue || req.body.cuttingValue < 1) return res.status(400).send({ error: "No cuttingValue provided" })
     let filePath = req.body.filePath[0]
     if (!fs.existsSync(filePath)) return res.status(400).send({ error: "File does not exist" })
     // Replace \\ with / for ffmpeg
@@ -85,13 +89,12 @@ const startServer = async () => {
     var workingDir = req.body.workingDir
     var flags = req.body.whisperFlags
     var modelName = req.body.modelName
+    var cuttingValue = req.body.cuttingValue
     // Check if workingDir ends with a / if not add it
     if (workingDir[workingDir.length - 1] != "/") workingDir += "/"
 
-    // Add space at the end of filepath
-    filePath += " "
     // First we need to process the file to create the subtitles
-    const child = exec('whisper ' + filePath + flags, (err, stdout, stderr) => {
+    whisper = exec('whisper ' + '"' + filePath + '" ' + flags, (err, stdout, stderr) => {
       if (err) {
         console.error(`exec error: ${err}`);
         res.status(400).send({ error: 'Whisper failed to run, please check whisper options. \n \n \n' + err })
@@ -99,10 +102,10 @@ const startServer = async () => {
     });
     // Wait until the process is done
     await new Promise((resolve, reject) => {
-      child.on('close', resolve);
-      child.on('error', reject);
+      whisper.on('close', resolve);
+      whisper.on('error', reject);
       // Print stdout
-      child.stdout.on('data', (data) => {
+      whisper.stdout.on('data', (data) => {
         console.log(data);
       });
     });
@@ -153,56 +156,111 @@ const startServer = async () => {
       newNumber2 = "001"
     }
 
-    // Loop through each subtitle, then use ffmpeg to cut out those parts of the file and save them as separate files
-    for (var i = 1; i < result.length; i++) {
-      var start = result[i].startTime;
-      var end = result[i].endTime;
-      var text = result[i].text;
+    if (cuttingValue == 1) {
+      for (var i = 1; i < result.length; i++) {
+        var start = result[i].startTime;
+        var end = result[i].endTime;
+        var text = result[i].text;
 
-      let newNumber = i.toString()
-      if (newNumber.length == 1) newNumber = "0000" + newNumber
-      if (newNumber.length == 2) newNumber = "000" + newNumber
-      if (newNumber.length == 3) newNumber = "00" + newNumber
-      if (newNumber.length == 4) newNumber = "0" + newNumber
+        let newNumber = i.toString()
+        if (newNumber.length == 1) newNumber = "0000" + newNumber
+        if (newNumber.length == 2) newNumber = "000" + newNumber
+        if (newNumber.length == 3) newNumber = "00" + newNumber
+        if (newNumber.length == 4) newNumber = "0" + newNumber
 
-      // Make sure file exists
-      if (!fs.existsSync(workingDir + modelName + '.txt')) {
-        // Create file
-        fs.writeFileSync(workingDir + modelName + '.txt', 'wavs/' + modelName + '_' + newNumber2 + '_' + newNumber + '.wav' + '|' + text + "\n");
-      } else {
-        fs.appendFileSync(workingDir + modelName + '.txt', 'wavs/' + modelName + '_' + newNumber2 + '_' + newNumber + '.wav' + '|' + text + "\n")
-      }
-
-      // Make timestamp readable by removing everything behind ,
-      start = start.replace(",", ".");
-      end = end.replace(",", ".");
-      // Calculate duration by turning start and end into seconds and subtracting them
-      var startSeconds = start.split(":").reduce((acc, time) => (60 * acc) + +time);
-      var endSeconds = end.split(":").reduce((acc, time) => (60 * acc) + +time);
-      var duration = endSeconds - startSeconds;
-      // MAke sure duration is not 0 seconds
-      if (duration == 0) {
-        duration = 1;
-      }
-      // Make sure duration is not negative
-      if (duration < 0) {
-        dialog.showErrorBox("Error while cutting", "There was a subtitle with negative time value. Skipping it for now.")
-        return console.log("Error: Duration is negative");
-      }
-      console.log(start, end, duration, text);
-
-      // Make sure audio is mono 22.050kHz using exec
-      const child = exec('ffmpeg' + ' -i ' + filePath + ' -ss ' + start + ' -t ' + duration + ' -ac 1 -ar 22050 ' + '"' + workingDir + '"' + 'wavs/' + '"' + modelName + '"' + '_' + newNumber2 + '_' + newNumber + '.wav', (err, stdout, stderr) => {
-        if (err) {
-          console.error(`exec error: ${err}`);
+        // Make sure file exists
+        if (!fs.existsSync(workingDir + modelName + '.txt')) {
+          // Create file
+          fs.writeFileSync(workingDir + modelName + '.txt', 'wavs/' + modelName + '_' + newNumber2 + '_' + newNumber + '.wav' + '|' + text + "\n");
+        } else {
+          fs.appendFileSync(workingDir + modelName + '.txt', 'wavs/' + modelName + '_' + newNumber2 + '_' + newNumber + '.wav' + '|' + text + "\n")
         }
-      });
-      // Wait until the process is done
-      await new Promise((resolve, reject) => {
-        child.on('close', resolve);
-        child.on('error', reject);
-      });
+
+        // Make timestamp readable by removing everything behind ,
+        start = start.replace(",", ".");
+        end = end.replace(",", ".");
+        // Calculate duration by turning start and end into seconds and subtracting them
+        var startSeconds = start.split(":").reduce((acc, time) => (60 * acc) + +time);
+        var endSeconds = end.split(":").reduce((acc, time) => (60 * acc) + +time);
+        var duration = endSeconds - startSeconds;
+        // MAke sure duration is not 0 seconds
+        if (duration == 0) {
+          duration = 1;
+        }
+        // Make sure duration is not negative
+        if (duration < 0) {
+          dialog.showErrorBox("Error while cutting", "There was a subtitle with negative time value. Skipping it for now.")
+          return console.log("Error: Duration is negative");
+        }
+        console.log(start, end, duration, text);
+
+        // Make sure audio is mono 22.050kHz using exec
+        const child = exec('ffmpeg' + ' -i ' + '"' + filePath + '"' + ' -ss ' + start + ' -t ' + duration + ' -ac 1 -ar 22050 ' + '"' + workingDir + '"' + 'wavs/' + '"' + modelName + '"' + '_' + newNumber2 + '_' + newNumber + '.wav', (err, stdout, stderr) => {
+          if (err) {
+            console.error(`exec error: ${err}`);
+          }
+        });
+        // Wait until the process is done
+        await new Promise((resolve, reject) => {
+          child.on('close', resolve);
+          child.on('error', reject);
+        });
+      }
+    } else {
+      for (var i = 1; i < result.length; i++) {
+        for (var j = i; j < i + cuttingValue; j++) {
+          try {
+            var start = result[j].startTime;
+            var end = result[j].endTime;
+            var text = result[j].text;
+
+            let newNumber = j.toString()
+            if (newNumber.length == 1) newNumber = "0000" + newNumber
+            if (newNumber.length == 2) newNumber = "000" + newNumber
+            if (newNumber.length == 3) newNumber = "00" + newNumber
+            if (newNumber.length == 4) newNumber = "0" + newNumber
+
+            // Make sure file exists
+            if (!fs.existsSync(workingDir + modelName + '.txt')) {
+              // Create file
+              fs.writeFileSync(workingDir + modelName + '.txt', 'wavs/' + modelName + '_' + newNumber2 + '_' + newNumber + '.wav' + '|' + text + "\n");
+            } else {
+              fs.appendFileSync(workingDir + modelName + '.txt', 'wavs/' + modelName + '_' + newNumber2 + '_' + newNumber + '.wav' + '|' + text + "\n")
+            }
+
+            // Make timestamp readable by removing everything behind ,
+            start = start.replace(",", ".");
+            end = end.replace(",", ".");
+            // Calculate duration by turning start and end into seconds and subtracting them
+            var startSeconds = start.split(":").reduce((acc, time) => (60 * acc) + +time);
+            var endSeconds = end.split(":").reduce((acc, time) => (60 * acc) + +time);
+            var duration = endSeconds - startSeconds;
+            // MAke sure duration is not 0 seconds
+            if (duration == 0) {
+              duration = 1;
+            }
+            // Make sure duration is not negative
+            if (duration < 0) {
+              dialog.showErrorBox("Error while cutting", "There was a subtitle with negative time value. Skipping it for now.")
+              return console.log("Error: Duration is negative");
+            }
+            console.log(start, end, duration, text);
+
+            // Make sure audio is mono 22.050kHz using exec
+            const child = exec('ffmpeg' + ' -i ' + '"' + filePath + '"' + ' -ss ' + start + ' -t ' + duration + ' -ac 1 -ar 22050 ' + '"' + workingDir + '"' + 'wavs/' + '"' + modelName + '"' + '_' + newNumber2 + '_' + newNumber + '.wav', (err, stdout, stderr) => {
+              if (err) {
+                console.error(`exec error: ${err}`);
+              }
+            });
+          } catch (error) {
+            console.log("Finished cutting")
+          }
+        }
+        i = i + cuttingValue - 1;
+        await new Promise(resolve => setTimeout(resolve, 3000));
+      }
     }
+
 
     fs.unlinkSync(fileName + '.srt')
     res.status(200).send('finished')
@@ -258,9 +316,8 @@ async function createWindow() {
   // Create the browser window.
   const win = new BrowserWindow({
     width: 800,
-    height: 600,
+    height: 800,
     webPreferences: {
-
       // Use pluginOptions.nodeIntegration, leave this alone
       // See nklayman.github.io/vue-cli-plugin-electron-builder/guide/security.html#node-integration for more info
       nodeIntegration: process.env.ELECTRON_NODE_INTEGRATION,
@@ -286,6 +343,7 @@ app.on('window-all-closed', () => {
   // to stay active until the user quits explicitly with Cmd + Q
   if (process.platform !== 'darwin') {
     app.quit()
+    exec('taskkill /F /T /IM whisper.exe');
   }
 })
 
@@ -317,11 +375,14 @@ if (isDevelopment) {
     process.on('message', (data) => {
       if (data === 'graceful-exit') {
         app.quit()
+        exec('taskkill /F /T /IM whisper.exe');
       }
     })
   } else {
     process.on('SIGTERM', () => {
+      // Stop python process
       app.quit()
+      exec('taskkill /F /T /IM whisper.exe');
     })
   }
 }
