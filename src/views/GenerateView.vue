@@ -1,8 +1,7 @@
 <template>
   <div class="settings">
     <div class="setting">
-      <h3>Select Audio File</h3>
-      <button @click="this.selectFile()">Select File</button>
+      <button @click="this.selectFile()">Select File(s)</button>
       <input v-model="this.audioFile" type="text" />
     </div>
     <div class="setting">
@@ -65,7 +64,7 @@ export default {
       modelName: "",
       loading: false,
       finished: false,
-      cuttingValue: 10,
+      cuttingValue: 1,
     };
   },
   methods: {

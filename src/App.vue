@@ -44,6 +44,18 @@ export default {
         this.$router.push("/settings");
       }
     });
+    if (localStorage.getItem("version") == null) {
+      localStorage.setItem("version", "v0.1.4");
+    }
+    axios({
+      method: "post",
+      url: "http://localhost:9861/api/checkUpdate",
+      data: {
+        version: localStorage.getItem("version"),
+      },
+    }).then((response) => {
+      localStorage.setItem("version", response.data.version);
+    });
   },
 };
 </script>
