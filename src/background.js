@@ -43,10 +43,7 @@ const startServer = async () => {
         'createDirectory'
       ],
       filters: [
-        // Limit to only audio file extensions
-        // Create list of audio file extensions
-        { name: 'Audio', extensions: ['mp3', 'wav', 'ogg', 'flac', 'aac', 'm4a', 'wma', 'aiff', 'au', 'ac3', 'amr', 'ape', 'dts', 'mka', 'mlp', 'tta', 'wv', 'webm', 'opus'] },
-        { name: 'Video', extensions: ['mp4', 'mov', 'avi', 'mkv'] },
+        { name: 'Files', extensions: ['mp3', 'wav', 'ogg', 'flac', 'aac', 'm4a', 'wma', 'aiff', 'au', 'ac3', 'amr', 'ape', 'dts', 'mka', 'mlp', 'tta', 'wv', 'webm', 'opus', 'mp4', 'mov', 'avi', 'mkv'] },
       ]
     })
     if (path) {

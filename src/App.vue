@@ -45,7 +45,7 @@ export default {
       }
     });
     if (localStorage.getItem("version") == null) {
-      localStorage.setItem("version", "v0.1.4");
+      localStorage.setItem("version", "v0.1.5");
     }
     axios({
       method: "post",
